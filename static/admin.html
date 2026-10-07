@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | NSFDC Channel Finance Management System</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .admin-container {
+      max-width: 1200px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+    .admin-tabs {
+      display: flex;
+      gap: 10px;
+      border-bottom: 2px solid var(--gov-blue-primary);
+      margin-bottom: 25px;
+    }
+    .admin-tab-btn {
+      padding: 12px 24px;
+      background: #E2E8F0;
+      border: none;
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #334155;
+    }
+    .admin-tab-btn.active {
+      background: var(--gov-blue-primary);
+      color: #FFFFFF;
+    }
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      background: #FFFFFF;
+    }
+    .admin-table th, .admin-table td {
+      border: 1px solid #CBD5E1;
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    .admin-table th {
+      background: #002B49;
+      color: #FFFFFF;
+    }
+    .badge-npa-high {
+      background: #FEE2E2;
+      color: #991B1B;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+    .badge-npa-low {
+      background: #D1FAE5;
+      color: #065F46;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-box {
+      background: #FFFFFF;
+      padding: 30px;
+      border-radius: 8px;
+      width: 450px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="tricolor-bar"></div>
+
+  <!-- Admin Header -->
+  <header class="gov-branding-header">
+    <div class="emblem-section">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="Emblem" class="emblem-img">
+      <div class="gov-title-text">
+        <h2>Government of India - Confidential Internal Portal</h2>
+        <h1 style="color: #991B1B;">NSFDC Channel Partner & NPA Administration Dashboard</h1>
+      </div>
+    </div>
+    <div>
+      <span id="adminSessionStatus" style="font-weight: 700; color: #166534;">Logged in as: Administrator</span>
+      <button class="btn-secondary" onclick="adminLogout()" style="margin-left: 15px; padding: 6px 12px; font-size: 0.85rem;">Logout</button>
+    </div>
+  </header>
+
+  <!-- Login Modal -->
+  <div id="loginModal" class="modal-overlay">
+    <div class="modal-box">
+      <h3 style="margin-top: 0; color: var(--gov-blue-dark);">🔒 Authorized Admin Authentication</h3>
+      <p style="font-size: 0.9rem; color: #64748B;">This area is restricted to official NSFDC administrators.</p>
+      <div class="form-group">
+        <label>Username:</label>
+        <input type="text" id="admin_user" class="form-control" value="admin">
+      </div>
+      <div class="form-group">
+        <label>Password:</label>
+        <input type="password" id="admin_pass" class="form-control" value="admin123">
+      </div>
+      <div id="loginError" style="color: #DC2626; font-size: 0.85rem; margin-bottom: 15px; display: none;">Invalid credentials!</div>
+      <button class="btn-primary" style="width: 100%;" onclick="submitAdminLogin()">Sign In to Admin Portal</button>
+    </div>
+  </div>
+
+  <!-- Admin Main Dashboard Content -->
+  <div class="admin-container" id="adminMainContent" style="display: none;">
+    
+    <!-- Tab Navigation -->
+    <div class="admin-tabs">
+      <button class="admin-tab-btn active" onclick="switchAdminTab('tab-partners')">🏦 Channel Partners & NPA Management</button>
+      <button class="admin-tab-btn" onclick="switchAdminTab('tab-schemes')">📜 Scheme Parameters & Online Links</button>
+      <button class="admin-tab-btn" onclick="switchAdminTab('tab-posts')">💬 Community Success Stories</button>
+      <button class="admin-tab-btn" onclick="switchAdminTab('tab-apps')">📋 Citizen Applications Database</button>
+    </div>
+
+    <!-- TAB 1: Channel Partners & NPA Ratios -->
+    <div id="tab-partners" class="admin-tab-content">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3>Channel Partner Bank Branches & NPA Ratios</h3>
+        <button class="btn-primary" onclick="toggleAddPartnerForm()">+ Add New Bank / Channel Partner Branch</button>
+      </div>
+
+      <!-- Add Partner Form Container -->
+      <div id="addPartnerFormBox" style="display: none; background: #F8FAFC; border: 1px solid #CBD5E1; padding: 20px; border-radius: 8px; margin: 15px 0;">
+        <h4 style="margin-top: 0; color: var(--gov-blue-dark);">Add Channel Partner Branch</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <input type="text" id="ap_name_en" class="form-control" placeholder="Bank Name (English e.g. State Bank of India)">
+          <input type="text" id="ap_name_hi" class="form-control" placeholder="Bank Name (Hindi e.g. भारतीय स्टेट बैंक)">
+          <select id="ap_type" class="form-control">
+            <option value="Public Sector Bank">Public Sector Bank</option>
+            <option value="Regional Rural Bank">Regional Rural Bank (RRB)</option>
+            <option value="State Channelizing Agency">State Channelizing Agency (SCA)</option>
+            <option value="NBFC-MFI">NBFC-MFI</option>
+          </select>
+          <input type="text" id="ap_branch" class="form-control" placeholder="Branch Name (e.g. Connaught Place Branch)">
+          <input type="text" id="ap_address" class="form-control" placeholder="Full Address">
+          <input type="text" id="ap_city" class="form-control" placeholder="City (e.g. New Delhi)">
+          <input type="text" id="ap_state" class="form-control" placeholder="State (e.g. Delhi)">
+          <input type="text" id="ap_pincode" class="form-control" placeholder="Pincode (e.g. 110001)">
+          <input type="number" id="ap_lat" class="form-control" placeholder="Latitude (e.g. 28.6289)" step="0.0001">
+          <input type="number" id="ap_lng" class="form-control" placeholder="Longitude (e.g. 77.2155)" step="0.0001">
+          <div>
+            <label style="font-weight: 700; color: #991B1B;">Non-Performing Asset [NPA] Ratio (%):</label>
+            <input type="number" id="ap_npa" class="form-control" placeholder="NPA Ratio % (e.g. 3.2)" step="0.1" value="2.5">
+            <span style="font-size: 0.75rem; color: #64748B;">Banks with NPA > 8.0% are automatically hidden from citizen locator.</span>
+          </div>
+          <input type="text" id="ap_schemes" class="form-control" placeholder="Supported Schemes (e.g. MICRO,TERM,EDUCATIONAL)" value="MICRO,TERM,EDUCATIONAL">
+        </div>
+        <button class="btn-success" style="margin-top: 15px;" onclick="savePartnerBtn()">Save Channel Partner Branch</button>
+      </div>
+
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Bank / Partner Name</th>
+            <th>Branch</th>
+            <th>City / State</th>
+            <th>Pincode</th>
+            <th>NPA Ratio (%) [Hidden from Citizen]</th>
+            <th>Status</th>
+            <th>Supported Schemes</th>
+          </tr>
+        </thead>
+        <tbody id="partnerTableBody">
+          <!-- Dynamically populated -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- TAB 2: Schemes & Online Links -->
+    <div id="tab-schemes" class="admin-tab-content" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3>Concessional Loan Schemes & Online Application Links</h3>
+        <button class="btn-primary" onclick="toggleAddSchemeForm()">+ Add New Scheme</button>
+      </div>
+
+      <!-- Add Scheme Form Container -->
+      <div id="addSchemeFormBox" style="display: none; background: #F8FAFC; border: 1px solid #CBD5E1; padding: 20px; border-radius: 8px; margin: 15px 0;">
+        <h4 style="margin-top: 0; color: var(--gov-blue-dark);">Create New Concessional Loan Scheme</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <input type="text" id="as_code" class="form-control" placeholder="Scheme Unique Code (e.g. GREEN_BIZ, SOLAR_LOAN)">
+          <select id="as_category" class="form-control">
+            <option value="micro">Micro Finance (micro)</option>
+            <option value="term">Term Loan (term)</option>
+            <option value="education">Educational Loan (education)</option>
+          </select>
+          <input type="text" id="as_name_en" class="form-control" placeholder="Scheme Name (English)">
+          <input type="text" id="as_name_hi" class="form-control" placeholder="Scheme Name (Hindi)">
+          <input type="number" id="as_max_amount" class="form-control" placeholder="Maximum Loan Amount (₹ e.g. 1000000)">
+          <input type="number" id="as_tenure" class="form-control" placeholder="Max Tenure (Years e.g. 5)">
+          <input type="number" id="as_rate_male" class="form-control" placeholder="Interest Rate Male (% e.g. 7.5)" step="0.1">
+          <input type="number" id="as_rate_female" class="form-control" placeholder="Interest Rate Female (% e.g. 7.0)" step="0.1">
+          <input type="number" id="as_moratorium" class="form-control" placeholder="Moratorium Months (e.g. 6)">
+          <input type="text" id="as_cost_sharing" class="form-control" placeholder="Cost Sharing Pattern (e.g. 90% NSFDC / 10% SCA)" value="90% NSFDC / 10% SCA">
+          <input type="text" id="as_online_url" class="form-control" placeholder="Online Application URL" value="https://jansamarth.in/">
+          <input type="number" id="as_income_limit" class="form-control" placeholder="Annual Family Income Ceiling (₹)" value="500000">
+          <textarea id="as_desc_en" class="form-control" style="grid-column: span 2;" placeholder="Scheme Description (English)"></textarea>
+          <textarea id="as_desc_hi" class="form-control" style="grid-column: span 2;" placeholder="Scheme Description (Hindi)"></textarea>
+          <textarea id="as_elig_en" class="form-control" placeholder="Eligibility Criteria (English)"></textarea>
+          <textarea id="as_elig_hi" class="form-control" placeholder="Eligibility Criteria (Hindi)"></textarea>
+          <textarea id="as_docs_en" class="form-control" placeholder="Required Documents Checklist (English)"></textarea>
+          <textarea id="as_docs_hi" class="form-control" placeholder="Required Documents Checklist (Hindi)"></textarea>
+        </div>
+        <button class="btn-success" style="margin-top: 15px;" onclick="saveSchemeBtn()">Save & Publish New Scheme</button>
+      </div>
+
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Scheme Code</th>
+            <th>Scheme Name</th>
+            <th>Max Amount (₹)</th>
+            <th>Interest (Male/Female)</th>
+            <th>Max Tenure</th>
+            <th>Moratorium</th>
+            <th>Official Online Application Link</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="schemeTableBody">
+          <!-- Dynamically populated -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- TAB 3: Community Success Stories -->
+    <div id="tab-posts" class="admin-tab-content" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3>Community Success Stories ("What people have done using loans")</h3>
+        <button class="btn-primary" onclick="toggleAddPostForm()">+ Add New Success Story</button>
+      </div>
+
+      <div id="addPostFormBox" style="display: none; background: #F8FAFC; border: 1px solid #CBD5E1; padding: 20px; border-radius: 8px; margin: 15px 0;">
+        <h4 style="margin-top: 0;">Add Beneficiary Story</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <select id="post_scheme_code" class="form-control">
+            <option value="MICRO">MICRO (Micro Finance)</option>
+            <option value="TERM">TERM (Term Loan)</option>
+            <option value="EDUCATIONAL">EDUCATIONAL (Education Loan)</option>
+          </select>
+          <input type="text" id="post_name_en" class="form-control" placeholder="Beneficiary Name (English)">
+          <input type="text" id="post_name_hi" class="form-control" placeholder="Beneficiary Name (Hindi)">
+          <input type="text" id="post_loc_en" class="form-control" placeholder="Location (e.g. Nagpur, Maharashtra)">
+          <input type="text" id="post_biz_en" class="form-control" placeholder="Business Type (e.g. Auto Repair Shop)">
+          <input type="number" id="post_amount" class="form-control" placeholder="Loan Amount (₹)">
+          <input type="text" id="post_image_url" class="form-control" placeholder="Image URL" value="https://images.unsplash.com/photo-1617886831575-b6d34b358580?auto=format&fit=crop&w=400&q=80">
+          <input type="text" id="post_badge_en" class="form-control" placeholder="Impact Badge (e.g. Employs 2 People)">
+          <textarea id="post_story_en" class="form-control" style="grid-column: span 2;" placeholder="Success Story Description (English)"></textarea>
+          <textarea id="post_story_hi" class="form-control" style="grid-column: span 2;" placeholder="Success Story Description (Hindi)"></textarea>
+        </div>
+        <button class="btn-success" style="margin-top: 15px;" onclick="savePostBtn()">Save Community Story</button>
+      </div>
+
+      <div id="adminPostsList"></div>
+    </div>
+
+    <!-- TAB 4: Citizen Applications Database -->
+    <div id="tab-apps" class="admin-tab-content" style="display: none;">
+      <h3>Submitted Citizen Guidance Applications</h3>
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Application Ref #</th>
+            <th>Applicant Name</th>
+            <th>Gender</th>
+            <th>Loan Amount</th>
+            <th>Income</th>
+            <th>Matched Scheme</th>
+            <th>Calculated EMI</th>
+            <th>Pathway</th>
+            <th>Assigned Bank Branch</th>
+            <th>Submitted Date</th>
+          </tr>
+        </thead>
+        <tbody id="appTableBody">
+          <!-- Dynamically populated -->
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script>
+    let adminToken = null;
+
+    function submitAdminLogin() {
+      const u = document.getElementById('admin_user').value;
+      const p = document.getElementById('admin_pass').value;
+
+      fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u, password: p })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'SUCCESS') {
+          adminToken = data.token;
+          document.getElementById('loginModal').style.display = 'none';
+          document.getElementById('adminMainContent').style.display = 'block';
+          loadAdminPartners();
+          loadAdminSchemes();
+          loadAdminApplications();
+        } else {
+          document.getElementById('loginError').style.display = 'block';
+        }
+      });
+    }
+
+    function adminLogout() {
+      adminToken = null;
+      document.getElementById('loginModal').style.display = 'flex';
+      document.getElementById('adminMainContent').style.display = 'none';
+    }
+
+    function switchAdminTab(tabId) {
+      document.querySelectorAll('.admin-tab-content').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.admin-tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).style.display = 'block';
+      event.target.classList.add('active');
+    }
+
+    function loadAdminPartners() {
+      fetch('/api/admin/partners')
+      .then(res => res.json())
+      .then(data => {
+        const tbody = document.getElementById('partnerTableBody');
+        tbody.innerHTML = data.map(p => `
+          <tr>
+            <td>${p.id}</td>
+            <td><strong>${p.name_en}</strong><br><small>${p.name_hi}</small></td>
+            <td>${p.branch_name_en}</td>
+            <td>${p.city}, ${p.state}</td>
+            <td>${p.pincode}</td>
+            <td>
+              <span class="${p.npa_ratio > 8.0 ? 'badge-npa-high' : 'badge-npa-low'}">
+                NPA: ${p.npa_ratio}% ${p.npa_ratio > 8.0 ? '(FILTERED OUT)' : '(ELIGIBLE)'}
+              </span>
+            </td>
+            <td>${p.is_active ? 'ACTIVE' : 'INACTIVE'}</td>
+            <td>${p.supported_schemes}</td>
+          </tr>
+        `).join('');
+      });
+    }
+
+    function toggleAddPartnerForm() {
+      const box = document.getElementById('addPartnerFormBox');
+      box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function savePartnerBtn() {
+      const partnerData = {
+        name_en: document.getElementById('ap_name_en').value,
+        name_hi: document.getElementById('ap_name_hi').value,
+        partner_type: document.getElementById('ap_type').value,
+        branch_name_en: document.getElementById('ap_branch').value,
+        branch_name_hi: document.getElementById('ap_branch').value,
+        address_en: document.getElementById('ap_address').value,
+        address_hi: document.getElementById('ap_address').value,
+        city: document.getElementById('ap_city').value,
+        state: document.getElementById('ap_state').value,
+        pincode: document.getElementById('ap_pincode').value,
+        latitude: parseFloat(document.getElementById('ap_lat').value || 28.6),
+        longitude: parseFloat(document.getElementById('ap_lng').value || 77.2),
+        npa_ratio: parseFloat(document.getElementById('ap_npa').value || 2.5),
+        is_active: 1,
+        supported_schemes: document.getElementById('ap_schemes').value
+      };
+
+      fetch('/api/admin/partners', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(partnerData)
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message);
+        toggleAddPartnerForm();
+        loadAdminPartners();
+      });
+    }
+
+    function loadAdminSchemes() {
+      fetch('/api/schemes')
+      .then(res => res.json())
+      .then(data => {
+        const tbody = document.getElementById('schemeTableBody');
+        tbody.innerHTML = data.map(s => `
+          <tr>
+            <td><strong>${s.code}</strong></td>
+            <td>${s.name_en}</td>
+            <td>₹${s.max_amount.toLocaleString('en-IN')}</td>
+            <td>Male: ${s.interest_rate_male}% | Female: ${s.interest_rate_female}%</td>
+            <td>${s.max_tenure_years} Years</td>
+            <td>${s.moratorium_months} Months</td>
+            <td><a href="${s.online_apply_url}" target="_blank">${s.online_apply_url}</a></td>
+            <td><button onclick="editOnlineUrl('${s.code}', '${s.online_apply_url}')" class="btn-primary" style="padding: 4px 8px; font-size: 0.8rem;">Edit Link</button></td>
+          </tr>
+        `).join('');
+      });
+    }
+
+    function toggleAddSchemeForm() {
+      const box = document.getElementById('addSchemeFormBox');
+      box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function saveSchemeBtn() {
+      const code = document.getElementById('as_code').value.trim();
+      if (!code) {
+        alert('Please enter a scheme unique code!');
+        return;
+      }
+
+      const schemeData = {
+        action: 'add',
+        code: code,
+        category: document.getElementById('as_category').value,
+        name_en: document.getElementById('as_name_en').value || code,
+        name_hi: document.getElementById('as_name_hi').value || code,
+        max_amount: parseFloat(document.getElementById('as_max_amount').value || 500000),
+        max_tenure_years: parseInt(document.getElementById('as_tenure').value || 5),
+        interest_rate_male: parseFloat(document.getElementById('as_rate_male').value || 8.0),
+        interest_rate_female: parseFloat(document.getElementById('as_rate_female').value || 7.5),
+        moratorium_months: parseInt(document.getElementById('as_moratorium').value || 6),
+        cost_sharing_rule: document.getElementById('as_cost_sharing').value,
+        online_apply_url: document.getElementById('as_online_url').value,
+        income_limit: parseFloat(document.getElementById('as_income_limit').value || 500000),
+        description_en: document.getElementById('as_desc_en').value,
+        description_hi: document.getElementById('as_desc_hi').value,
+        eligibility_en: document.getElementById('as_elig_en').value,
+        eligibility_hi: document.getElementById('as_elig_hi').value,
+        documents_en: document.getElementById('as_docs_en').value,
+        documents_hi: document.getElementById('as_docs_hi').value
+      };
+
+      fetch('/api/admin/schemes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(schemeData)
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message);
+        toggleAddSchemeForm();
+        loadAdminSchemes();
+      });
+    }
+
+    function editOnlineUrl(code, currentUrl) {
+      const newUrl = prompt("Enter new online application portal URL:", currentUrl);
+      if (newUrl) {
+        fetch('/api/admin/schemes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code: code,
+            action: 'update',
+            online_apply_url: newUrl
+          })
+        }).then(() => loadAdminSchemes());
+      }
+    }
+
+    function toggleAddPostForm() {
+      const box = document.getElementById('addPostFormBox');
+      box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function savePostBtn() {
+      const postData = {
+        scheme_code: document.getElementById('post_scheme_code').value,
+        beneficiary_name_en: document.getElementById('post_name_en').value,
+        beneficiary_name_hi: document.getElementById('post_name_hi').value,
+        location_en: document.getElementById('post_loc_en').value,
+        location_hi: document.getElementById('post_loc_en').value,
+        business_type_en: document.getElementById('post_biz_en').value,
+        business_type_hi: document.getElementById('post_biz_en').value,
+        loan_amount: parseFloat(document.getElementById('post_amount').value || 100000),
+        story_en: document.getElementById('post_story_en').value,
+        story_hi: document.getElementById('post_story_hi').value,
+        image_url: document.getElementById('post_image_url').value,
+        impact_badge_en: document.getElementById('post_badge_en').value,
+        impact_badge_hi: document.getElementById('post_badge_en').value
+      };
+
+      fetch('/api/admin/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(postData)
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message);
+        toggleAddPostForm();
+      });
+    }
+
+    function loadAdminApplications() {
+      fetch('/api/admin/applications')
+      .then(res => res.json())
+      .then(data => {
+        const tbody = document.getElementById('appTableBody');
+        tbody.innerHTML = data.map(a => `
+          <tr>
+            <td><strong>${a.application_no}</strong></td>
+            <td>${a.applicant_name}</td>
+            <td>${a.gender}</td>
+            <td>₹${a.required_amount.toLocaleString('en-IN')}</td>
+            <td>₹${a.annual_income.toLocaleString('en-IN')}</td>
+            <td><span class="badge-npa-low">${a.recommended_scheme_code}</span></td>
+            <td>₹${a.calculated_emi}</td>
+            <td>${a.chosen_mode.toUpperCase()}</td>
+            <td>${a.partner_name ? a.partner_name + ' (' + a.partner_branch + ')' : 'Online Pathway'}</td>
+            <td>${a.created_at}</td>
+          </tr>
+        `).join('');
+      });
+    }
+  </script>
+</body>
+</html>
